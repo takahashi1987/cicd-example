@@ -1,0 +1,77 @@
+version: "3.9"
+services:
+  rails:
+    build: . # Dockerfile のあるディレクトリのパスを指定。docker-compose.yml ファイル自身がある場所からの相対パスにる
+    container_name: rails
+    command: bundle exec puma -C config/puma.rb # nginxを導入するときの変更
+    # command: ash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+    volumes:
+      - .:/myapp # カレントディレクトリをバインドマウントしている。開発環境用の設定だとおもう
+      - public-data:/myapp/public
+
+      # 以下ボリューム不明
+      # nginxの設定で使用している
+      - tmp-data:/myapp/tmp
+      - log-data:/myapp/log
+
+
+      - /myapp/node_modules
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    environment:
+      WEBPACKER_DEV_SERVER_HOST: webpacker
+
+  webpacker:
+    build: . # Dockerfile のあるディレクトリのパスを指定。docker-compose.yml ファイル自身がある場所からの相対パスにる
+    container_name: webpacker
+    volumes:
+       - .:/myapp # カレントディレクトリをバインドマウントしている。開発環境用の設定だとおもう
+
+       # Dockerfileの中でyarn installした際に作成される/node_modulesをコンテナで利用するためです(ボリューム指定しないと削除されてしまいます)
+       # このボリュームを指定することでcommand: webpack-dev-serverを/node_modulesから利用することができます。
+       - /myapp/node_modules # これはなんだろう
+
+       - public-data:/myapp/public # ボリュームマウント
+    command: ./bin/webpack-dev-server # webpackerを起動するコマンド？
+    environment:
+      WEBPACKER_DEV_SERVER_HOST: 0.0.0.0
+    ports:
+      - "3035:3035"
+
+    # このuser指定はなに？
+    user: root
+
+  db:
+    image: mysql:8.0.27
+    container_name: db
+    environment:
+      TZ: Asia/Tokyo
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db:/var/lib/mysql
+
+  web:
+    build:
+      context: containers/nginx
+    volumes:
+      - public-data:/myapp/public
+      - tmp-data:/myapp/tmp
+    ports:
+      - 80:80
+    depends_on:
+      - rails
+
+volumes:
+  db:
+    driver: local # 規定では local。S3 に変更することもできる
+  bundle: #このボリュームはどこで使用されている？おそらく不要だった→volumesの不要だったものを削除(bundleは不要だったので消しておきます)
+    driver: local
+  public-data:
+  tmp-data:
+  log-data:

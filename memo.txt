@@ -1,0 +1,24 @@
+$ docker-compose run --no-deps rails bundle exec rails new . --force --database=mysql
+
+docker image が生成された
+REPOSITORY                TAG           IMAGE ID       CREATED          SIZE
+rails-ecr-pj_rails        latest        4f5322a77f0b   13 minutes ago   383MB
+
+docker network が生成された
+NETWORK ID     NAME                   DRIVER    SCOPE
+bfd2b239f891   rails-ecr-pj_default   bridge    local
+
+database.yml
+default: &default
+  adapter: mysql2
+  encoding: utf8mb4
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  username: root
+  password: <%= ENV["DB_PASSWORD"] %>　ここに環境変数
+  host: db ここを localhost → db に変更
+
+
+
+# 別のターミナルを開く
+$ docker exec -it rails sh
+$ rails db:create
