@@ -16,7 +16,8 @@ default: &default
   cache_manifest: false
 
   # Extract and emit a css file
-  extract_css: false
+  # CSSをコンパイルする設定
+  extract_css: true
 
   static_assets_extensions:
     - .jpg

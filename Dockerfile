@@ -9,6 +9,8 @@ RUN adduser -D app -u ${UID:-1000}
 RUN apk update \
       && apk add --no-cache gcc make libc-dev g++ mariadb-dev tzdata nodejs~=14 yarn
 
+# 環境変数の設定(本番)
+ENV RAILS_ENV=production
 
 WORKDIR /myapp
 COPY Gemfile .
@@ -30,6 +32,18 @@ ENTRYPOINT ["entrypoint.sh"]
 # EXPOSE 3000
 # CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
 
-USER app
+
+RUN chmod +x ./bin/webpack
+RUN NODE_ENV=production ./bin/webpack
+
+# rootユーザーに変更 (本番ではファイル編集をしない)
+# USER app
+
 RUN mkdir -p tmp/sockets
 RUN mkdir -p tmp/pids
+
+# volumeの追加 (FargateでNginxにボリュームを共有するため)
+VOLUME /myapp/public
+VOLUME /myapp/tmp
+
+CMD /bin/sh -c "rm -f tmp/pids/server.pid && bundle exec puma -C config/puma.rb"
